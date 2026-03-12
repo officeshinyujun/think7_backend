@@ -1,7 +1,8 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import OpenAI from 'openai';
 import { Content, ContentDifficulty } from './content.entity';
 import { Question, QuestionType } from '../questions/question.entity';
@@ -9,6 +10,7 @@ import { CONTENT_GENERATOR_PROMPT } from '../common/prompts';
 
 @Injectable()
 export class ContentsService {
+  private readonly logger = new Logger(ContentsService.name);
   private openai: OpenAI;
 
   constructor(
@@ -120,5 +122,28 @@ export class ContentsService {
   async remove(id: string): Promise<void> {
     await this.questionRepository.delete({ content_id: id });
     await this.contentRepository.delete(id);
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: 'Asia/Seoul' })
+  async handleDailyContentGeneration() {
+    this.logger.log('Starting daily content generation cron job...');
+    const topics = [
+      '기술이 인간 소외에 미치는 영향',
+      '플랫폼 기업의 독점과 공정성',
+      'AI 시대의 저작권 문제',
+      '현대 사회의 정보 격차 심화',
+      '기후 변화와 기업의 사회적 책임',
+      '소셜 미디어 알고리즘과 확증 편향',
+      '저출산 고령화 사회의 경제적 파급 효과'
+    ];
+    // Select a random topic
+    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+
+    try {
+      await this.generateContent(randomTopic);
+      this.logger.log(`Successfully generated daily content for topic: ${randomTopic}`);
+    } catch (error) {
+      this.logger.error(`Failed to generate daily content for topic: ${randomTopic}`, error);
+    }
   }
 }

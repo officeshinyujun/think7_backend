@@ -52,10 +52,11 @@ export class AnalysisService {
         .replace('{{ideal_answer}}', question.ideal_answer || '')
         .replace('{{keywords}}', JSON.stringify(question.keywords || []))
         .replace('{{scoring_criteria}}', question.scoring_criteria || '')
+        .replace('{{user_name}}', user?.email.split('@')[0] || '사용자')
         .replace('{{user_answer}}', answer.answer_text);
 
       const evalResult = await this.callOpenAI(promptTemplate.system, evalPrompt);
-      
+
       evaluationResults.push({
         question_type: question.type,
         ...evalResult,
@@ -64,14 +65,16 @@ export class AnalysisService {
       totalScore += evalResult.score;
 
       if (evalResult.score < 70) { // Threshold for wrong answer
-           wrongAnswers.push({
-               number: question.order || 0,
-               question: question.question_text,
-               wrong_answer: answer.answer_text,
-               correct_answer: question.ideal_answer || '',
-                relevant_part: evalResult.relevant_part || '',
-                explanation: isPremium ? evalResult.feedback : null
-           });
+        wrongAnswers.push({
+          number: question.order || 0,
+          question: question.question_text,
+          wrong_answer: answer.answer_text,
+          correct_answer: question.ideal_answer || '',
+          relevant_part: evalResult.relevant_part || '',
+          explanation: isPremium ? evalResult.feedback : null,
+          reasoning_steps: isPremium ? evalResult.reasoning_steps : null,
+          taxonomy: isPremium ? evalResult.taxonomy : []
+        });
       }
     }
 
@@ -93,10 +96,10 @@ export class AnalysisService {
         comment: isPremium ? reportResult.overall_feedback : null
       },
       dimension_scores: [
-          { dimension: "핵심 주장 파악", score: reportResult.core_argument_score, status: this.getStatus(reportResult.core_argument_score), comment: "" },
-          { dimension: "논리적 추론", score: reportResult.inference_score, status: this.getStatus(reportResult.inference_score), comment: "" },
-          { dimension: "비판적 사고", score: reportResult.critical_score, status: this.getStatus(reportResult.critical_score), comment: "" },
-          { dimension: "편향 탐지", score: reportResult.bias_score, status: this.getStatus(reportResult.bias_score), comment: "" }
+        { dimension: "핵심 주장 파악", score: reportResult.core_argument_score, status: this.getStatus(reportResult.core_argument_score), comment: "" },
+        { dimension: "논리적 추론", score: reportResult.inference_score, status: this.getStatus(reportResult.inference_score), comment: "" },
+        { dimension: "비판적 사고", score: reportResult.critical_score, status: this.getStatus(reportResult.critical_score), comment: "" },
+        { dimension: "편향 탐지", score: reportResult.bias_score, status: this.getStatus(reportResult.bias_score), comment: "" }
       ],
       thinking_type: isPremium ? {
         type: reportResult.thinking_type,
@@ -134,9 +137,9 @@ export class AnalysisService {
   }
 
   private getStatus(score: number): string {
-      if (score >= 80) return "강점";
-      if (score >= 60) return "보통";
-      return "약점";
+    if (score >= 80) return "강점";
+    if (score >= 60) return "보통";
+    return "약점";
   }
 
   async findOne(id: string): Promise<Analysis | null> {

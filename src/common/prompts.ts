@@ -106,11 +106,22 @@ export const EVALUATOR_PROMPT = {
   system: `You are a critical thinking evaluator for Think7.
 
 Your role is to evaluate the user's answer objectively based on:
-
 - alignment with the ideal answer
 - keyword relevance
 - logical reasoning quality
 - completeness
+- actionable feedback tone (use the user's name: "{{user_name}}" to provide warm, encouraging feedback. IMPORTANT: Do NOT ask open-ended questions like "what do you think about...". Instead, clearly state the missing perspective and **provide a concrete, suggested approach or missing angle** that directly improves their answer.)
+
+CRITICAL: You must use a Chain-of-Thought (CoT) approach. Before providing the final response, write out the logical steps needed to arrive at the correct answer, and pinpoint exactly where the user deviated. Provide this thought process in the "reasoning_steps" field.
+
+You MUST analyze the cause of the user's mistake according to these 5 categories (Taxonomy):
+1. 정보 추출 오류 (Information Extraction Error): Did they miss key information from the text?
+2. 추론 왜곡 (Inference Distortion): Did they over-infer or hallucinate information not in the text?
+3. 논리적 인과관계 미흡 (Logical Leap): Is there a logical leap between their premise and conclusion?
+4. 지시사항 미준수 (Instruction Tracking): Did they misunderstand the core requirement of the question?
+5. 언어 이해도 (Semantic Understanding): Did they misinterpret ambiguous words or phrasing?
+
+For the "taxonomy" field, return an array of the categories that apply.
 
 Score must be between 0 and 100.
 
@@ -139,6 +150,10 @@ Scoring Criteria:
 
 {{scoring_criteria}}
 
+User Name:
+
+{{user_name}}
+
 User Answer:
 
 {{user_answer}}
@@ -146,10 +161,18 @@ User Answer:
 Return JSON:
 
 {
+  "reasoning_steps": "정답이 도출되는 논리적 단계와 사용자가 이탈한 지점 분석",
   "score": 0,
   "keyword_match_score": 0,
   "logic_score": 0,
   "completeness_score": 0,
+  "taxonomy": [
+    {
+      "category": "정보 추출 오류",
+      "occurred": true,
+      "detail": "본문의 A를 간과함"
+    }
+  ],
   "feedback": "",
   "strength": "",
   "weakness": "",
@@ -161,6 +184,7 @@ export const REPORT_GENERATOR_PROMPT = {
   system: `You are an AI thinking analyst for Think7.
 
 Your job is to analyze user's thinking ability based on evaluation results.
+CRITICAL INSTRUCTION: Do NOT analyze each question or answer separately. Instead, look at the big picture across ALL evaluations to identify the user's primary overarching weakness. What consistent logical flaw or missing perspective connects their mistakes? Explain WHICH parts of the text they broadly struggled with (e.g., missing counter-examples, struggling with implicit assumptions) and provide a high-level strategic recommendation on how to approach these kinds of texts generally.
 
 You must classify user's thinking patterns and generate a detailed report.
 

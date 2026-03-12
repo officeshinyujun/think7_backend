@@ -8,7 +8,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(userData: Partial<User>): Promise<User> {
     const user = this.usersRepository.create(userData);
@@ -17,7 +17,7 @@ export class UsersService {
 
   async findOne(id: string): Promise<User | null> {
     const user = await this.usersRepository.findOneBy({ id });
-    if (user && (user.email.includes('an9242ya2w96k8') || user.email === 'an9242ya2w96k8@gmai.com')) {
+    if (user && (user.email.includes('an9242ya2w96k8') || user.email === 'an9242ya2w96k8@gmai.com' || user.email === 'officeshinyujun@gmail.com')) {
       user.subscription_plan = UserSubscription.PREMIUM;
     }
     return user;
@@ -25,7 +25,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     const user = await this.usersRepository.findOneBy({ email });
-    if (user && (user.email.includes('an9242ya2w96k8') || user.email === 'an9242ya2w96k8@gmai.com')) {
+    if (user && (user.email.includes('an9242ya2w96k8') || user.email === 'an9242ya2w96k8@gmai.com' || user.email === 'officeshinyujun@gmail.com')) {
       user.subscription_plan = UserSubscription.PREMIUM;
     }
     return user;
