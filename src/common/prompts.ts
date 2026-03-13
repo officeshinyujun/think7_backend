@@ -29,6 +29,14 @@ Do not include extra text.`,
 
 Topic: {{topic}}
 
+Content Type: {{content_type}}
+Provide the content according to this type:
+- If "논리/주장", focus heavily on a structured argument with clear premises, logical flow, and conclusions.
+- If "시사/일반", focus on informative current events with implied perspectives or societal impacts.
+- If "철학/인문", focus on abstract concepts, ethical dilemmas, and historical or philosophical perspectives.
+- If "과학/기술", focus on scientific phenomena, technological advancements, and logical deductions based on factual evidence.
+- If "비즈니스/경제", focus on market trends, corporate strategies, and economic reasoning or analysis.
+
 Difficulty: {{difficulty}}
 
 IMPORTANT - Body Length: The body MUST be between 1800 and 2000 Korean characters. Write at least 4-5 detailed paragraphs. Do NOT write shorter than 1800 characters. This is a strict requirement.

@@ -62,10 +62,11 @@ export class ContentsService {
     });
   }
 
-  async generateContent(topic: string): Promise<Content> {
+  async generateContent(topic: string, type?: string): Promise<Content> {
     try {
       const prompt = CONTENT_GENERATOR_PROMPT.user
         .replace('{{topic}}', topic)
+        .replace('{{content_type}}', type || '시사/일반')
         .replace('{{difficulty}}', 'Medium');
 
       const completion = await this.openai.chat.completions.create({

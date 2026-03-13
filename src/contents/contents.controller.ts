@@ -7,8 +7,8 @@ export class ContentsController {
   constructor(private readonly contentsService: ContentsService) {}
 
   @Post('generate')
-  generate(@Body() body: { topic: string }): Promise<Content> {
-    return this.contentsService.generateContent(body.topic);
+  generate(@Body() body: { topic: string, type?: string }): Promise<Content> {
+    return this.contentsService.generateContent(body.topic, body.type);
   }
 
   @Post()
