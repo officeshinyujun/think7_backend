@@ -4,8 +4,9 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { Analysis } from './analysis.entity';
+import { CoachSession } from './coach-session.entity';
 import { ContentsService } from '../contents/contents.service';
-import { EVALUATOR_PROMPT, REPORT_GENERATOR_PROMPT, BASIC_EVALUATOR_PROMPT, BASIC_REPORT_GENERATOR_PROMPT } from '../common/prompts';
+import { EVALUATOR_PROMPT, REPORT_GENERATOR_PROMPT, BASIC_EVALUATOR_PROMPT, BASIC_REPORT_GENERATOR_PROMPT, THINK_COACH_PROMPT } from '../common/prompts';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class AnalysisService {
   constructor(
     @InjectRepository(Analysis)
     private analysisRepository: Repository<Analysis>,
+    @InjectRepository(CoachSession)
+    private coachSessionRepository: Repository<CoachSession>,
     private configService: ConfigService,
     private contentsService: ContentsService,
     private usersService: UsersService,
@@ -148,6 +151,59 @@ export class AnalysisService {
 
   async findAll(userId: string): Promise<Analysis[]> {
     return this.analysisRepository.find({ where: { user_id: userId } });
+  }
+
+  async coachUser(analysisId: string, questionNumber: number, chatHistory: any[], sessionId?: string): Promise<any> {
+    const analysis = await this.findOne(analysisId);
+    if (!analysis) throw new HttpException('Analysis not found', HttpStatus.NOT_FOUND);
+
+    const wrongAnswer = analysis.wrong_answer.find((w: any) => w.number === questionNumber);
+    if (!wrongAnswer) throw new HttpException('Question not found in wrong answers', HttpStatus.NOT_FOUND);
+
+    const content = await this.contentsService.findOne(analysis.content_id);
+    if (!content) throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+
+    const systemPrompt = THINK_COACH_PROMPT.system;
+    const userPrompt = THINK_COACH_PROMPT.user
+      .replace('{{content}}', content.body)
+      .replace('{{question}}', wrongAnswer.question)
+      .replace('{{ideal_answer}}', wrongAnswer.correct_answer)
+      .replace('{{user_answer}}', wrongAnswer.wrong_answer)
+      .replace('{{taxonomy}}', JSON.stringify(wrongAnswer.taxonomy || []))
+      .replace('{{chat_history}}', JSON.stringify(chatHistory || []));
+
+    const aiResponse = await this.callOpenAI(systemPrompt, userPrompt);
+
+    // Append the AI response to messages for persistence
+    const aiMessage = { role: 'assistant', content: JSON.stringify(aiResponse) };
+
+    // Gather user messages from history (last user message if any)
+    const allMessages = [...(chatHistory || []), aiMessage];
+
+    if (sessionId) {
+      // Update existing session
+      await this.coachSessionRepository.update(sessionId, { messages: allMessages });
+    } else {
+      // Create new session
+      const session = this.coachSessionRepository.create({
+        user_id: analysis.user_id,
+        analysis_id: analysisId,
+        question_number: questionNumber,
+        question_text: wrongAnswer.question,
+        messages: allMessages,
+      });
+      const saved = await this.coachSessionRepository.save(session);
+      return { ...aiResponse, sessionId: saved.id };
+    }
+
+    return { ...aiResponse, sessionId };
+  }
+
+  async listCoachSessions(userId: string): Promise<CoachSession[]> {
+    return this.coachSessionRepository.find({
+      where: { user_id: userId },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async deleteAllByUser(userId: string): Promise<{ deleted: number }> {

@@ -16,6 +16,19 @@ export class AnalysisController {
     return this.analysisService.findOne(id);
   }
 
+  @Post('report/:id/coach')
+  async coachUser(
+    @Param('id') id: string,
+    @Body() body: { questionNumber: number; chatHistory: any[]; sessionId?: string }
+  ) {
+    return this.analysisService.coachUser(id, body.questionNumber, body.chatHistory, body.sessionId);
+  }
+
+  @Get('coach-sessions')
+  listSessions(@Query('userId') userId: string) {
+    return this.analysisService.listCoachSessions(userId);
+  }
+
   @Get('report')
   findAll(@Query('userId') userId: string): Promise<Analysis[]> {
     return this.analysisService.findAll(userId);

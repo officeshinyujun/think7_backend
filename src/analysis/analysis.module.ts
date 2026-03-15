@@ -4,12 +4,13 @@ import { ConfigModule } from '@nestjs/config';
 import { AnalysisService } from './analysis.service';
 import { AnalysisController } from './analysis.controller';
 import { Analysis } from './analysis.entity';
+import { CoachSession } from './coach-session.entity';
 import { ContentsModule } from '../contents/contents.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Analysis]),
+    TypeOrmModule.forFeature([Analysis, CoachSession]),
     ConfigModule,
     ContentsModule,
     UsersModule,
