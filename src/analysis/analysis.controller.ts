@@ -29,6 +29,19 @@ export class AnalysisController {
     return this.analysisService.listCoachSessions(userId);
   }
 
+  @Get('report/:id/coach/:qid')
+  async getCoachSession(
+    @Param('id') id: string,
+    @Param('qid') qid: string,
+  ) {
+    return this.analysisService.getCoachSession(id, parseInt(qid, 10));
+  }
+
+  @Delete('coach-sessions/all')
+  deleteAllCoachSessions() {
+    return this.analysisService.deleteAllCoachSessions();
+  }
+
   @Get('report')
   findAll(@Query('userId') userId: string): Promise<Analysis[]> {
     return this.analysisService.findAll(userId);

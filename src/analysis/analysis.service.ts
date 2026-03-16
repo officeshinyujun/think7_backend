@@ -206,6 +206,17 @@ export class AnalysisService {
     });
   }
 
+  async getCoachSession(analysisId: string, questionNumber: number): Promise<CoachSession | null> {
+    return this.coachSessionRepository.findOne({
+      where: { analysis_id: analysisId, question_number: questionNumber },
+    });
+  }
+
+  async deleteAllCoachSessions(): Promise<{ deleted: number }> {
+    await this.coachSessionRepository.clear();
+    return { deleted: 1 };
+  }
+
   async deleteAllByUser(userId: string): Promise<{ deleted: number }> {
     const result = await this.analysisRepository.delete({ user_id: userId });
     return { deleted: result.affected || 0 };
