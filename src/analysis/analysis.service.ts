@@ -1,6 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { Analysis } from './analysis.entity';
@@ -156,6 +156,24 @@ export class AnalysisService {
   async coachUser(analysisId: string, questionNumber: number, chatHistory: any[], sessionId?: string): Promise<any> {
     const analysis = await this.findOne(analysisId);
     if (!analysis) throw new HttpException('Analysis not found', HttpStatus.NOT_FOUND);
+
+    // Free tier daily limit check (only for new sessions)
+    if (!sessionId) {
+      const user = await this.usersService.findOne(analysis.user_id);
+      if (user?.subscription_plan === 'FREE') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const count = await this.coachSessionRepository.count({
+          where: {
+            user_id: analysis.user_id,
+            created_at: MoreThanOrEqual(today),
+          },
+        });
+        if (count >= 1) {
+          throw new HttpException('FREE_TIER_DAILY_LIMIT', HttpStatus.FORBIDDEN);
+        }
+      }
+    }
 
     const wrongAnswer = analysis.wrong_answer.find((w: any) => w.number === questionNumber);
     if (!wrongAnswer) throw new HttpException('Question not found in wrong answers', HttpStatus.NOT_FOUND);
