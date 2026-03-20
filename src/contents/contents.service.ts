@@ -6,7 +6,9 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import OpenAI from 'openai';
 import { Content, ContentDifficulty } from './content.entity';
 import { Question, QuestionType } from '../questions/question.entity';
+import { User, UserSubscription } from '../users/user.entity';
 import { CONTENT_GENERATOR_PROMPT } from '../common/prompts';
+import { Between } from 'typeorm';
 
 @Injectable()
 export class ContentsService {
@@ -18,6 +20,8 @@ export class ContentsService {
     private contentRepository: Repository<Content>,
     @InjectRepository(Question)
     private questionRepository: Repository<Question>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private configService: ConfigService,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -62,8 +66,34 @@ export class ContentsService {
     });
   }
 
-  async generateContent(topic: string, type?: string): Promise<Content> {
+  async generateContent(topic: string, userId: string | null, type?: string): Promise<Content> {
     try {
+      // Check user limit if userId is provided
+      if (userId) {
+        const user = await this.userRepository.findOneBy({ id: userId });
+        if (!user) {
+          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        }
+
+        if (user.subscription_plan === UserSubscription.FREE) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+
+          const count = await this.contentRepository.count({
+            where: {
+              user_id: userId,
+              created_at: Between(today, tomorrow),
+            },
+          });
+
+          if (count >= 2) {
+            throw new HttpException('FREE_TIER_DAILY_LIMIT_REACHED', HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+
       const prompt = CONTENT_GENERATOR_PROMPT.user
         .replace('{{topic}}', topic)
         .replace('{{content_type}}', type || '시사/일반')
@@ -91,6 +121,8 @@ export class ContentsService {
         estimated_time: result.estimated_time || 7,
         published_date: new Date().toISOString().split('T')[0],
         thumbnail_image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b', // Placeholder
+        user_id: userId as string,
+        is_premium: false,
       });
       const savedContent = await this.contentRepository.save(content);
 
@@ -141,7 +173,7 @@ export class ContentsService {
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
     try {
-      await this.generateContent(randomTopic);
+      await this.generateContent(randomTopic, null);
       this.logger.log(`Successfully generated daily content for topic: ${randomTopic}`);
     } catch (error) {
       this.logger.error(`Failed to generate daily content for topic: ${randomTopic}`, error);

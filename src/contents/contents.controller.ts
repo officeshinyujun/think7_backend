@@ -1,14 +1,18 @@
-import { Controller, Get, Post, Body, Param, Delete, ParseUUIDPipe, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, ParseUUIDPipe, Query, UseGuards, Req } from '@nestjs/common';
 import { ContentsService } from './contents.service';
 import { Content } from './content.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Request } from 'express';
 
 @Controller('content')
 export class ContentsController {
   constructor(private readonly contentsService: ContentsService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('generate')
-  generate(@Body() body: { topic: string, type?: string }): Promise<Content> {
-    return this.contentsService.generateContent(body.topic, body.type);
+  generate(@Body() body: { topic: string, type?: string }, @Req() req: any): Promise<Content> {
+    const user = req['user'];
+    return this.contentsService.generateContent(body.topic, user.userId, body.type);
   }
 
   @Post()

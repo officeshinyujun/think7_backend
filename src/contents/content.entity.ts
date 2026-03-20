@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Question } from '../questions/question.entity';
+import { User } from '../users/user.entity';
 
 export enum ContentDifficulty {
   EASY = 'EASY',
@@ -44,6 +45,13 @@ export class Content {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @Column({ nullable: true })
+  user_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
   @OneToMany(() => Question, (question: Question) => question.content)
   questions: Question[];
